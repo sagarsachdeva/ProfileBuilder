@@ -11,13 +11,31 @@ import edu.tcd.repositorycrawler.hibernate.HibernateUtil;
 public class UserCommitDAO {
 
 	@SuppressWarnings("unchecked")
-	public List<Commit> getCommitsByRepo(String authorId, String repoId) {
+	public List<Commit> getUserCommitsByRepo(String authorId, String repoId) {
 		List<Commit> userCommits = null;
 		Session session = null;
 		try {
 			session = HibernateUtil.getSessionFactory().openSession();
 			userCommits = session.createQuery("from Commit where authorId= :authorId and repoId = :repoId")
 					.setParameter("authorId", authorId).setParameter("repoId", repoId).list();
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			if (session.isOpen())
+				session.close();
+		}
+		return userCommits;
+	}
+
+	@SuppressWarnings("unchecked")
+	public List<Commit> getUserCommits(String authorId) {
+		List<Commit> userCommits = null;
+		Session session = null;
+		try {
+			session = HibernateUtil.getSessionFactory().openSession();
+			userCommits = session.createQuery("from Commit where authorId= :authorId")
+					.setParameter("authorId", authorId).list();
 
 		} catch (Exception e) {
 			e.printStackTrace();

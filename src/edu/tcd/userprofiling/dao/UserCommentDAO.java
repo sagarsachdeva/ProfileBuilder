@@ -27,4 +27,23 @@ public class UserCommentDAO {
 		return userComments;
 
 	}
+	
+	@SuppressWarnings("unchecked")
+	public List<IssueComment> getUserComments(String userId) {
+		List<IssueComment> userComments = null;
+		Session session = null;
+		try {
+			session = HibernateUtil.getSessionFactory().openSession();
+			userComments = session.createQuery("from IssueComment where userId= :userId")
+					.setParameter("userId", userId).list();
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			if (session.isOpen())
+				session.close();
+		}
+		return userComments;
+
+	}
 }

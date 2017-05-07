@@ -31,12 +31,14 @@ public class UserTypedRepositoryDAO {
 	}
 
 	@SuppressWarnings("unchecked")
-	public List<Repository> getOtherRepositories() {
+	public List<Repository> getOtherRepositories(String userId) {
 		List<Repository> repositories = new ArrayList<Repository>();
 		Session session = null;
 		try {
 			session = HibernateUtil.getSessionFactory().openSession();
-			repositories = session.createQuery("from Repository where id not in (select repoId from UserRepo)").list();
+			repositories = session
+					.createQuery("from Repository where id not in (select repoId from UserRepo where userId=:userId)")
+					.setParameter("userId", userId).list();
 
 		} catch (Exception e) {
 			e.printStackTrace();

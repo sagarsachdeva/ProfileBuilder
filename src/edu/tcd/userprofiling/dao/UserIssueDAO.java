@@ -28,4 +28,22 @@ public class UserIssueDAO {
 		return userIssues;
 
 	}
+
+	@SuppressWarnings("unchecked")
+	public List<Issue> getUserIssuesByType(String userId, String action) {
+		List<Issue> userIssues = null;
+		Session session = null;
+		try {
+			session = HibernateUtil.getSessionFactory().openSession();
+			userIssues = session.createQuery("from Issue where userId=:userId and action=:action")
+					.setParameter("userId", userId).setParameter("action", action).list();
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			if (session.isOpen())
+				session.close();
+		}
+		return userIssues;
+	}
 }

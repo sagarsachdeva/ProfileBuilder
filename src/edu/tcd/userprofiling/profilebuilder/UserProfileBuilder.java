@@ -1,9 +1,8 @@
 package edu.tcd.userprofiling.profilebuilder;
 
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
+import java.util.Date;
 import java.util.List;
-import java.util.Set;
 
 import edu.tcd.repositorycrawler.bean.Commit;
 import edu.tcd.repositorycrawler.bean.Issue;
@@ -46,12 +45,17 @@ public class UserProfileBuilder {
 
 	private static RepoLanguageDAO repoLanguageDAO = new RepoLanguageDAO();
 
+	private static List<String> fetchedRepoIdList = new ArrayList<String>();
+
 	public List<UserProfile> buildUserProfiles() {
 		List<UserProfile> userprofiles = new ArrayList<UserProfile>();
 
 		List<User> users = userDAO.getAllUser();
 
 		for (User user : users) {
+			// if (!user.getId().equals("102883"))
+			// continue;
+
 			UserProfile userProfile = new UserProfile();
 
 			userProfile.setUser(user);
@@ -59,58 +63,224 @@ public class UserProfileBuilder {
 			userProfile.setStarredRepositories(fetchTypedRepositories(user, RepositoryType.Starred.name()));
 			userProfile.setOwnedRepositories(fetchTypedRepositories(user, RepositoryType.Owned.name()));
 
-			userProfile
-					.setOtherRepositories(fetchOtherRepositories(user, userTypedRepositoryDAO.getOtherRepositories()));
+			fetchOtherRepositories(userProfile, user, userTypedRepositoryDAO.getOtherRepositories(user.getId()));
 
 			userprofiles.add(userProfile);
+			// break;
 		}
 		return userprofiles;
 	}
 
-	private List<UserTypedRepository> fetchOtherRepositories(User user, List<Repository> repositories) {
+	private void fetchOtherRepositories(UserProfile userProfile, User user, List<Repository> repositories) {
 		List<UserTypedRepository> userOtherRepositories = new ArrayList<UserTypedRepository>();
 
-		for (Repository repository : repositories) {
-			boolean hasRelation = false;
-			UserTypedRepository otherRepository = new UserTypedRepository();
+		List<Issue> userOpenedIssues = userIssueDAO.getUserIssuesByType(user.getId(), IssueAction.opened.name());
+		List<Issue> userReOpenedIssues = userIssueDAO.getUserIssuesByType(user.getId(), IssueAction.reopened.name());
+		List<Issue> userClosedIssues = userIssueDAO.getUserIssuesByType(user.getId(), IssueAction.closed.name());
 
-			List<UserIssue> openedIssues = fetchRepoIssues(user, repository, IssueAction.opened.name());
-			if (openedIssues.size() > 0) {
-				hasRelation = true;
-				otherRepository.setRepoOpenedIssues(openedIssues);
-			}
+		List<Issue> userNewOpenedIssues = getNotFetchedIssues(userProfile, userOpenedIssues, IssueAction.opened.name());
+		addOtherRepoIssues(userNewOpenedIssues, IssueAction.opened.name(), userOtherRepositories);
 
-			List<UserIssue> reoOpenedIssues = fetchRepoIssues(user, repository, IssueAction.reopened.name());
-			if (reoOpenedIssues.size() > 0) {
-				hasRelation = true;
-				otherRepository.setRepoReOpenedIssues(reoOpenedIssues);
-			}
+		List<Issue> userNewReOpenedIssues = getNotFetchedIssues(userProfile, userReOpenedIssues,
+				IssueAction.reopened.name());
+		addOtherRepoIssues(userNewReOpenedIssues, IssueAction.reopened.name(), userOtherRepositories);
 
-			List<UserIssue> closedIssues = fetchRepoIssues(user, repository, IssueAction.closed.name());
-			if (closedIssues.size() > 0) {
-				hasRelation = true;
-				otherRepository.setRepoClosedIssues(closedIssues);
-			}
+		List<Issue> userNewClosedIssues = getNotFetchedIssues(userProfile, userClosedIssues, IssueAction.closed.name());
+		addOtherRepoIssues(userNewClosedIssues, IssueAction.closed.name(), userOtherRepositories);
 
-			List<UserComment> userComments = fetchRepoIssueComments(user, repository);
-			if (userComments.size() > 0) {
-				hasRelation = true;
-				otherRepository.setRepoComments(userComments);
-			}
+		List<IssueComment> userComments = userCommentDAO.getUserComments(user.getId());
+		List<IssueComment> userNewComments = getNotFetchedComments(userProfile, userComments);
+		addOtherRepoComments(userNewComments, userOtherRepositories);
 
-			List<UserCommit> userCommits = fetchRepoCommits(user, repository);
-			if (userCommits.size() > 0) {
-				hasRelation = true;
-				otherRepository.setRepoCommits(userCommits);
-			}
-
-			if (hasRelation) {
-				otherRepository.setRepoLanguages(repoLanguageDAO.getLanguageByRepoId(repository.getId()));
-				userOtherRepositories.add(otherRepository);
-			}
-
+		List<Commit> userCommits = userCommitDAO.getUserCommits(user.getId());
+		List<Commit> userNewCommits = getNotFetchedCommits(userProfile, userCommits);
+		addOtherRepoCommits(userNewCommits, userOtherRepositories);
+		for (UserTypedRepository otherRepo : userOtherRepositories) {
+			String repoId = otherRepo.getRepository().getId();
+			otherRepo.setRepoLanguages(repoLanguageDAO.getLanguageByRepoId(repoId));
 		}
-		return userOtherRepositories;
+
+		userProfile.setOtherRepositories(userOtherRepositories);
+	}
+
+	private void addOtherRepoCommits(List<Commit> userNewCommits, List<UserTypedRepository> userOtherRepositories) {
+		for (Commit commit : userNewCommits) {
+			UserTypedRepository existingRepo = null;
+			UserCommit userCommit = new UserCommit();
+			userCommit.setCommit(commit);
+			for (UserTypedRepository repo : userOtherRepositories) {
+				if (commit.getRepoId().equals(repo.getRepository().getId())) {
+					repo.getRepoCommits().add(userCommit);
+					existingRepo = repo;
+					break;
+				}
+			}
+			if (existingRepo != null)
+				continue;
+
+			existingRepo = new UserTypedRepository();
+			existingRepo.setRepository(repoDAO.getRepositoryById(commit.getRepoId()));
+			existingRepo.getRepoCommits().add(userCommit);
+			userOtherRepositories.add(existingRepo);
+		}
+	}
+
+	private List<Commit> getNotFetchedCommits(UserProfile userProfile, List<Commit> userCommits) {
+		List<Commit> userNewCommits = new ArrayList<Commit>();
+		List<String> userExistingCommitsId = new ArrayList<String>();
+
+		for (UserTypedRepository repo : userProfile.getOwnedRepositories()) {
+			for (UserCommit commit : repo.getRepoCommits()) {
+				userExistingCommitsId.add(commit.getCommit().getId());
+			}
+		}
+		for (UserTypedRepository repo : userProfile.getStarredRepositories()) {
+			for (UserCommit commit : repo.getRepoCommits()) {
+				userExistingCommitsId.add(commit.getCommit().getId());
+			}
+		}
+
+		for (Commit commit : userCommits) {
+			if (userExistingCommitsId.contains(commit.getId()))
+				continue;
+
+			userNewCommits.add(commit);
+		}
+		return userNewCommits;
+	}
+
+	private void addOtherRepoComments(List<IssueComment> userNewComments,
+			List<UserTypedRepository> userOtherRepositories) {
+		for (IssueComment comment : userNewComments) {
+			UserTypedRepository existingRepo = null;
+			UserComment userComment = new UserComment();
+			userComment.setComment(comment);
+			for (UserTypedRepository repo : userOtherRepositories) {
+				if (comment.getRepoId().equals(repo.getRepository().getId())) {
+					repo.getRepoComments().add(userComment);
+					existingRepo = repo;
+					break;
+				}
+			}
+			if (existingRepo != null)
+				continue;
+
+			existingRepo = new UserTypedRepository();
+			existingRepo.setRepository(repoDAO.getRepositoryById(comment.getRepoId()));
+			existingRepo.getRepoComments().add(userComment);
+			userOtherRepositories.add(existingRepo);
+		}
+	}
+
+	private List<IssueComment> getNotFetchedComments(UserProfile userProfile, List<IssueComment> userComments) {
+		List<IssueComment> userNewComments = new ArrayList<IssueComment>();
+		List<String> userExistingCommentsId = new ArrayList<String>();
+
+		for (UserTypedRepository repo : userProfile.getOwnedRepositories()) {
+			for (UserComment comment : repo.getRepoComments()) {
+				userExistingCommentsId.add(comment.getComment().getId());
+			}
+		}
+		for (UserTypedRepository repo : userProfile.getStarredRepositories()) {
+			for (UserComment comment : repo.getRepoComments()) {
+				userExistingCommentsId.add(comment.getComment().getId());
+			}
+		}
+
+		for (IssueComment comment : userComments) {
+			if (userExistingCommentsId.contains(comment.getId()))
+				continue;
+
+			userNewComments.add(comment);
+		}
+		return userNewComments;
+	}
+
+	private void addOtherRepoIssues(List<Issue> userNewIssues, String type,
+			List<UserTypedRepository> userOtherRepositories) {
+
+		for (Issue issue : userNewIssues) {
+			UserTypedRepository existingRepo = null;
+			UserIssue userIssue = new UserIssue();
+			userIssue.setIssue(issue);
+			for (UserTypedRepository repo : userOtherRepositories) {
+				if (issue.getRepoId().equals(repo.getRepository().getId())) {
+
+					if (type.equals(IssueAction.opened.name())) {
+						repo.getRepoOpenedIssues().add(userIssue);
+					} else if (type.equals(IssueAction.reopened.name())) {
+						repo.getRepoReOpenedIssues().add(userIssue);
+					} else if (type.equals(IssueAction.closed.name())) {
+						repo.getRepoClosedIssues().add(userIssue);
+					}
+
+					existingRepo = repo;
+					break;
+				}
+			}
+
+			if (existingRepo != null)
+				continue;
+			existingRepo = new UserTypedRepository();
+			existingRepo.setRepository(repoDAO.getRepositoryById(issue.getRepoId()));
+			existingRepo.getRepoOpenedIssues().add(userIssue);
+			userOtherRepositories.add(existingRepo);
+		}
+
+	}
+
+	private List<Issue> getNotFetchedIssues(UserProfile userProfile, List<Issue> userIssues, String type) {
+		List<Issue> userNewIssues = new ArrayList<Issue>();
+		List<String> userExistingIssuesId = new ArrayList<String>();
+		if (type.equals(IssueAction.opened.name())) {
+			for (UserTypedRepository repo : userProfile.getOwnedRepositories()) {
+				for (UserIssue userIssue : repo.getRepoOpenedIssues()) {
+					userExistingIssuesId.add(userIssue.getIssue().getId());
+				}
+			}
+
+			for (UserTypedRepository repo : userProfile.getStarredRepositories()) {
+				for (UserIssue userIssue : repo.getRepoOpenedIssues()) {
+					userExistingIssuesId.add(userIssue.getIssue().getId());
+				}
+			}
+		}
+
+		else if (type.equals(IssueAction.reopened.name())) {
+			for (UserTypedRepository repo : userProfile.getOwnedRepositories()) {
+				for (UserIssue userIssue : repo.getRepoReOpenedIssues()) {
+					userExistingIssuesId.add(userIssue.getIssue().getId());
+				}
+			}
+
+			for (UserTypedRepository repo : userProfile.getStarredRepositories()) {
+				for (UserIssue userIssue : repo.getRepoReOpenedIssues()) {
+					userExistingIssuesId.add(userIssue.getIssue().getId());
+				}
+			}
+		}
+
+		else if (type.equals(IssueAction.closed.name())) {
+			for (UserTypedRepository repo : userProfile.getOwnedRepositories()) {
+				for (UserIssue userIssue : repo.getRepoClosedIssues()) {
+					userExistingIssuesId.add(userIssue.getIssue().getId());
+				}
+			}
+
+			for (UserTypedRepository repo : userProfile.getStarredRepositories()) {
+				for (UserIssue userIssue : repo.getRepoClosedIssues()) {
+					userExistingIssuesId.add(userIssue.getIssue().getId());
+				}
+			}
+		}
+
+		for (Issue issue : userIssues) {
+			if (userExistingIssuesId.contains(issue.getId()))
+				continue;
+
+			userNewIssues.add(issue);
+		}
+		return userNewIssues;
 	}
 
 	private List<UserTypedRepository> fetchTypedRepositories(User user, String type) {
@@ -134,6 +304,8 @@ public class UserProfileBuilder {
 
 			userTypedRepository.setRepoLanguages(repoLanguageDAO.getLanguageByRepoId(repository.getId()));
 
+			fetchedRepoIdList.add(repository.getId());
+
 			userTypedRepositories.add(userTypedRepository);
 		}
 
@@ -143,7 +315,7 @@ public class UserProfileBuilder {
 	private List<UserCommit> fetchRepoCommits(User user, Repository repository) {
 		List<UserCommit> userCommits = new ArrayList<UserCommit>();
 
-		List<Commit> commits = userCommitDAO.getCommitsByRepo(user.getId(), repository.getId());
+		List<Commit> commits = userCommitDAO.getUserCommitsByRepo(user.getId(), repository.getId());
 
 		for (Commit commit : commits) {
 			UserCommit userCommit = new UserCommit();
@@ -187,34 +359,32 @@ public class UserProfileBuilder {
 	}
 
 	public static void main(String[] args) {
+		Date d = new Date();
 		UserProfileBuilder builder = new UserProfileBuilder();
-		List<UserProfile> profiles = builder.buildUserProfiles();
-		List<String> idList = new ArrayList<String>();
-		Set<String> idSet = new LinkedHashSet<String>();
-		for (UserProfile profile : profiles) {
-			for (UserTypedRepository repo : profile.getOtherRepositories()) {
-				for (UserCommit commit : repo.getRepoCommits()) {
-					idList.add(commit.getCommit().getId());
-					idSet.add(commit.getCommit().getId());
-				}
-			}
-
-			for (UserTypedRepository repo : profile.getOwnedRepositories()) {
-				for (UserCommit commit : repo.getRepoCommits()) {
-					idList.add(commit.getCommit().getId());
-					idSet.add(commit.getCommit().getId());
-				}
-			}
-
-			for (UserTypedRepository repo : profile.getStarredRepositories()) {
-				for (UserCommit commit : repo.getRepoCommits()) {
-					idList.add(commit.getCommit().getId());
-					idSet.add(commit.getCommit().getId());
-				}
-			}
-		}
-		System.out.println();
-		System.out.println("Total commits = " + idList.size());
-		System.out.println("Total unique commits = " + idSet.size());
+		builder.buildUserProfiles();
+		// List<UserProfile> userProfiles = builder.buildUserProfiles();
+		// int count = 0;
+		// for (UserProfile userProfile : userProfiles) {
+		// for (UserTypedRepository repo : userProfile.getOtherRepositories()) {
+		// count += repo.getRepoOpenedIssues().size();
+		// }
+		// System.out.println("other Issues opened : " + count);
+		// count = 0;
+		//
+		// for (UserTypedRepository repo : userProfile.getOwnedRepositories()) {
+		// count += repo.getRepoOpenedIssues().size();
+		// }
+		// System.out.println("owned Issues opened : " + count);
+		// count = 0;
+		//
+		// for (UserTypedRepository repo : userProfile.getStarredRepositories())
+		// {
+		// count += repo.getRepoOpenedIssues().size();
+		// }
+		// System.out.println("starred Issues opened : " + count);
+		// count = 0;
+		// }
+		System.out.println(d);
+		System.out.println(new Date());
 	}
 }
