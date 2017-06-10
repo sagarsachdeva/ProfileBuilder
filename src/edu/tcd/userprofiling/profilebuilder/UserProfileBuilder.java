@@ -26,6 +26,7 @@ import edu.tcd.userprofiling.dao.UserCommentDAO;
 import edu.tcd.userprofiling.dao.UserCommitDAO;
 import edu.tcd.userprofiling.dao.UserIssueDAO;
 import edu.tcd.userprofiling.dao.UserTypedRepositoryDAO;
+import edu.tcd.userprofiling.scoring.ScoreAssigner;
 
 public class UserProfileBuilder {
 
@@ -47,14 +48,14 @@ public class UserProfileBuilder {
 
 	private static List<String> fetchedRepoIdList = new ArrayList<String>();
 
+	private static ScoreAssigner scoreAssigner = new ScoreAssigner();
+
 	public List<UserProfile> buildUserProfiles() {
 		List<UserProfile> userprofiles = new ArrayList<UserProfile>();
 
 		List<User> users = userDAO.getAllUser();
 
 		for (User user : users) {
-			// if (!user.getId().equals("102883"))
-			// continue;
 
 			UserProfile userProfile = new UserProfile();
 
@@ -65,8 +66,9 @@ public class UserProfileBuilder {
 
 			fetchOtherRepositories(userProfile, user, userTypedRepositoryDAO.getOtherRepositories(user.getId()));
 
+			scoreAssigner.assignScore(userProfile);
+
 			userprofiles.add(userProfile);
-			// break;
 		}
 		return userprofiles;
 	}
@@ -108,6 +110,8 @@ public class UserProfileBuilder {
 			UserTypedRepository existingRepo = null;
 			UserCommit userCommit = new UserCommit();
 			userCommit.setCommit(commit);
+			userCommit.setModifications(userCommitDAO.getModificationByCommitId(commit.getId()));
+
 			for (UserTypedRepository repo : userOtherRepositories) {
 				if (commit.getRepoId().equals(repo.getRepository().getId())) {
 					repo.getRepoCommits().add(userCommit);
@@ -123,6 +127,7 @@ public class UserProfileBuilder {
 			existingRepo.getRepoCommits().add(userCommit);
 			userOtherRepositories.add(existingRepo);
 		}
+
 	}
 
 	private List<Commit> getNotFetchedCommits(UserProfile userProfile, List<Commit> userCommits) {

@@ -13,11 +13,14 @@ public class UserProfile {
 
 	private List<UserTypedRepository> otherRepositories;
 
+	private List<UserSkill> skills;
+
+	private double popularityScore;
+
 	private User user;
 
 	public UserProfile() {
-		starredRepositories = new ArrayList<UserTypedRepository>();
-		ownedRepositories = new ArrayList<UserTypedRepository>();
+		skills = new ArrayList<UserSkill>();
 	}
 
 	public List<UserTypedRepository> getStarredRepositories() {
@@ -50,5 +53,21 @@ public class UserProfile {
 
 	public void setOtherRepositories(List<UserTypedRepository> otherRepositories) {
 		this.otherRepositories = otherRepositories;
+	}
+
+	public List<UserSkill> getSkills() {
+		return skills;
+	}
+
+	public void setSkills(List<UserSkill> skills) {
+		this.skills = skills;
+	}
+
+	public double getPopularityScore() {
+		return popularityScore;
+	}
+
+	public void setPopularityScore(double popularityScore) {
+		this.popularityScore = popularityScore;
 	}
 }
