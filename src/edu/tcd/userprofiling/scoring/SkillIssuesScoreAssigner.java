@@ -31,6 +31,10 @@ public class SkillIssuesScoreAssigner {
 			if (repo.getRepoClosedIssues().size() == 0)
 				continue;
 
+			if (repo.getRepoLanguages() == null) {
+				continue;
+				
+			}
 			for (RepoLanguage language : repo.getRepoLanguages()) {
 				UserSkill userSkill = new UserSkill();
 				userSkill.setName(language.getName().toLowerCase());

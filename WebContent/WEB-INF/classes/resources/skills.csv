@@ -1,0 +1,29 @@
+programming languages,core java/java:php:c:ruby on rails:ruby:groovy:python:grails:embedded:go:dart:scala:swift:clojure:android
+scripting,shellscript/shell script/bash script/bash scripting:batch processing/batch process
+javaee,j2ee/javaee/java ee:servlet/servlets:jsp:java utilities:rabbitmq:jms:rmi:osgi
+javascript,javascript:jquery:coffeescript
+css,css/cascading style sheets/css3:bootstrap:scss
+html,html/hypertext markup language/hyper text markup language/html5
+mvc,mvc technologies/mvc/model view controller/model view controller
+design principles,design patterns/design standard/design standards/design principles:object oriented design:object oriented programming:software design
+concurrency,thread technology/multithreading/multi threading/concurrency/concurrency control/multi threaded programming
+web services,web services:restful:soap:wpf:wcf:microservices/micro services:backend development
+web,http:https:xml:xslt:json
+spring framework,spring framework/spring:spring integration:springboot/spring boot:spring orm:spring security:spring core:spring mvc
+persistence framework,persistence frameworks/persistence framework:jpa:hibernate
+websphere,websphere
+nodejs,nodejs/node js/node.js
+testing,junit:cucumber:gherkin:mockito:jockit:test driven development/tdd:mocha:jasmine:selenium
+servers,application server:websphere:wildfly:glassfish:jboss:tomcat:weblogic:red hat
+tools,jira:sonar:maven:gradle:eclipse:docker:git:svn:gulp:grunt:ejs:jenkins:intellij:cisco firewall:vmware:ant:nginx:yaml:toml:xcode:rubygems
+configuration management,puppet:cfengine:ched:ansible:salt
+distributed technologies,load balancing:clustering:cloud computing/cloud platform/cloud technology/cloud deployment/cloud
+database,sql:mysql:oracle:postgresql:mongodb/mongo db:couchdb/couch db:redis:hadoop
+angular js,angular/angular js/angularjs
+kafka,kafka
+automation,automation tool/automation tools
+operating system,windows:linux:ubuntu:unix:gnu:mac
+agile,agile:scrum
+cms,cms:keystone/keystone cms
+ui,ui:ux
+roles,technical architect/solution architect/software architect/architect

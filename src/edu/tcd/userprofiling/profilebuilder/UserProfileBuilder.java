@@ -50,13 +50,27 @@ public class UserProfileBuilder {
 
 	private static ScoreAssigner scoreAssigner = new ScoreAssigner();
 
-	public List<UserProfile> buildUserProfiles() {
+	public static List<UserProfile> userProfiles;
+
+	static {
+		try {
+			userProfiles = buildUserProfiles();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public static List<UserProfile> buildUserProfiles() {
 		List<UserProfile> userprofiles = new ArrayList<UserProfile>();
 
 		List<User> users = userDAO.getAllUser();
-
+//		int count = 0;
 		for (User user : users) {
-
+			// if (!user.getId().equals("66577"))
+			// continue;
+//			if (count == 100) {
+//				break;
+//			}
 			UserProfile userProfile = new UserProfile();
 
 			userProfile.setUser(user);
@@ -69,11 +83,13 @@ public class UserProfileBuilder {
 			scoreAssigner.assignScore(userProfile);
 
 			userprofiles.add(userProfile);
+//			count++;
+			// break;
 		}
 		return userprofiles;
 	}
 
-	private void fetchOtherRepositories(UserProfile userProfile, User user, List<Repository> repositories) {
+	private static void fetchOtherRepositories(UserProfile userProfile, User user, List<Repository> repositories) {
 		List<UserTypedRepository> userOtherRepositories = new ArrayList<UserTypedRepository>();
 
 		List<Issue> userOpenedIssues = userIssueDAO.getUserIssuesByType(user.getId(), IssueAction.opened.name());
@@ -105,7 +121,8 @@ public class UserProfileBuilder {
 		userProfile.setOtherRepositories(userOtherRepositories);
 	}
 
-	private void addOtherRepoCommits(List<Commit> userNewCommits, List<UserTypedRepository> userOtherRepositories) {
+	private static void addOtherRepoCommits(List<Commit> userNewCommits,
+			List<UserTypedRepository> userOtherRepositories) {
 		for (Commit commit : userNewCommits) {
 			UserTypedRepository existingRepo = null;
 			UserCommit userCommit = new UserCommit();
@@ -130,7 +147,7 @@ public class UserProfileBuilder {
 
 	}
 
-	private List<Commit> getNotFetchedCommits(UserProfile userProfile, List<Commit> userCommits) {
+	private static List<Commit> getNotFetchedCommits(UserProfile userProfile, List<Commit> userCommits) {
 		List<Commit> userNewCommits = new ArrayList<Commit>();
 		List<String> userExistingCommitsId = new ArrayList<String>();
 
@@ -154,7 +171,7 @@ public class UserProfileBuilder {
 		return userNewCommits;
 	}
 
-	private void addOtherRepoComments(List<IssueComment> userNewComments,
+	private static void addOtherRepoComments(List<IssueComment> userNewComments,
 			List<UserTypedRepository> userOtherRepositories) {
 		for (IssueComment comment : userNewComments) {
 			UserTypedRepository existingRepo = null;
@@ -177,7 +194,7 @@ public class UserProfileBuilder {
 		}
 	}
 
-	private List<IssueComment> getNotFetchedComments(UserProfile userProfile, List<IssueComment> userComments) {
+	private static List<IssueComment> getNotFetchedComments(UserProfile userProfile, List<IssueComment> userComments) {
 		List<IssueComment> userNewComments = new ArrayList<IssueComment>();
 		List<String> userExistingCommentsId = new ArrayList<String>();
 
@@ -201,7 +218,7 @@ public class UserProfileBuilder {
 		return userNewComments;
 	}
 
-	private void addOtherRepoIssues(List<Issue> userNewIssues, String type,
+	private static void addOtherRepoIssues(List<Issue> userNewIssues, String type,
 			List<UserTypedRepository> userOtherRepositories) {
 
 		for (Issue issue : userNewIssues) {
@@ -234,7 +251,7 @@ public class UserProfileBuilder {
 
 	}
 
-	private List<Issue> getNotFetchedIssues(UserProfile userProfile, List<Issue> userIssues, String type) {
+	private static List<Issue> getNotFetchedIssues(UserProfile userProfile, List<Issue> userIssues, String type) {
 		List<Issue> userNewIssues = new ArrayList<Issue>();
 		List<String> userExistingIssuesId = new ArrayList<String>();
 		if (type.equals(IssueAction.opened.name())) {
@@ -288,7 +305,7 @@ public class UserProfileBuilder {
 		return userNewIssues;
 	}
 
-	private List<UserTypedRepository> fetchTypedRepositories(User user, String type) {
+	private static List<UserTypedRepository> fetchTypedRepositories(User user, String type) {
 		List<UserTypedRepository> userTypedRepositories = new ArrayList<UserTypedRepository>();
 
 		List<UserRepo> userRepos = userTypedRepositoryDAO.getUserReposByType(user.getId(), type);
@@ -317,7 +334,7 @@ public class UserProfileBuilder {
 		return userTypedRepositories;
 	}
 
-	private List<UserCommit> fetchRepoCommits(User user, Repository repository) {
+	private static List<UserCommit> fetchRepoCommits(User user, Repository repository) {
 		List<UserCommit> userCommits = new ArrayList<UserCommit>();
 
 		List<Commit> commits = userCommitDAO.getUserCommitsByRepo(user.getId(), repository.getId());
@@ -333,7 +350,7 @@ public class UserProfileBuilder {
 		return userCommits;
 	}
 
-	private List<UserComment> fetchRepoIssueComments(User user, Repository repository) {
+	private static List<UserComment> fetchRepoIssueComments(User user, Repository repository) {
 		List<UserComment> userComments = new ArrayList<UserComment>();
 
 		List<IssueComment> issueComments = userCommentDAO.getUserCommentsByRepo(user.getId(), repository.getId());
@@ -348,7 +365,7 @@ public class UserProfileBuilder {
 		return userComments;
 	}
 
-	private List<UserIssue> fetchRepoIssues(User user, Repository repository, String action) {
+	private static List<UserIssue> fetchRepoIssues(User user, Repository repository, String action) {
 		List<UserIssue> userIssues = new ArrayList<UserIssue>();
 
 		List<Issue> issues = userIssueDAO.getUserIssuesByRepoAndType(user.getId(), repository.getId(), action);
@@ -365,8 +382,7 @@ public class UserProfileBuilder {
 
 	public static void main(String[] args) {
 		Date d = new Date();
-		UserProfileBuilder builder = new UserProfileBuilder();
-		builder.buildUserProfiles();
+		buildUserProfiles();
 		// List<UserProfile> userProfiles = builder.buildUserProfiles();
 		// int count = 0;
 		// for (UserProfile userProfile : userProfiles) {
@@ -392,4 +408,9 @@ public class UserProfileBuilder {
 		System.out.println(d);
 		System.out.println(new Date());
 	}
+
+	public static List<UserProfile> getUserProfiles() {
+		return userProfiles;
+	}
+
 }

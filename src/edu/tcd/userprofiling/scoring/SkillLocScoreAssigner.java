@@ -32,6 +32,9 @@ public class SkillLocScoreAssigner {
 			for (UserCommit commit : repo.getRepoCommits()) {
 				for (CommitModification modification : commit.getModifications()) {
 					String skill = skillExtensionDao.getExtensionSkillMap().get(modification.getExtension());
+					if (skill == null)
+						continue;
+
 					if (skill.equals("Other"))
 						continue;
 

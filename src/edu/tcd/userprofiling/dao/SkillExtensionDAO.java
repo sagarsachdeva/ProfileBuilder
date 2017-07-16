@@ -42,9 +42,6 @@ public class SkillExtensionDAO {
 
 		for (Object[] extension : extensions) {
 			String skill = extensionSkillMap.get(extension[0].toString());
-			if (skill.equals("Other")) {
-				System.out.println();
-			}
 			for (SkillWithTotalLocChange skillExtension : skillWithTotalLocChanges) {
 				if (skillExtension.getSkill().equals(skill)) {
 					skillExtension.setTotalLocChanged(
@@ -105,11 +102,6 @@ public class SkillExtensionDAO {
 				session.close();
 		}
 		return o;
-	}
-
-	public static void main(String[] args) {
-		SkillExtensionDAO skillExtensionDAO = new SkillExtensionDAO();
-		skillExtensionDAO.getNoOfUsersForSkill("java");
 	}
 
 	public Map<String, String> getExtensionSkillMap() {
